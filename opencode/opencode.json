@@ -1,0 +1,59 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "skill": {
+      "*": "deny"
+    }
+  },
+  "default_agent": "plan",
+  "small_model": "fhgenie/deepseek-ai/DeepSeek-V4.1-Flash",
+  "agent": {
+    "plan": {
+      "model": "fhgenie/deepseek-ai/DeepSeek-V4.1-Flash"
+    },
+    "build": {
+      "model": "fhgenie/nvidia/GLM-5.3-NVFP4"
+    }
+  },
+  "provider": {
+    "fhgenie": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "FhGenie",
+      "options": {
+        "baseURL": "{env:FHGENIE_BASE_URL}",
+        "apiKey": "{env:FHGENIE_API_TOKEN}"
+      },
+      "models": {
+        "deepseek-ai/DeepSeek-V4.1-Flash": {
+          "name": "DeepSeek V4.1 Flash",
+          "limit": { "context": 262144, "output": 16384 }
+        },
+        "deepseek-ai/DeepSeek-V4-Flash-0731": {
+          "name": "DeepSeek V4 Flash 0731",
+          "limit": { "context": 262144, "output": 16384 }
+        },
+        "nvidia/GLM-5.3-NVFP4": {
+          "name": "GLM 5.3",
+          "limit": { "context": 262144, "output": 16384 }
+        },
+        "nvidia/GLM-5.2-NVFP4": {
+          "name": "GLM 5.2",
+          "limit": { "context": 262144, "output": 16384 }
+        },
+        "nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16": {
+          "name": "Nemotron 3 Nano 4B",
+          "limit": { "context": 262144, "output": 16384 }
+        },
+        "nvidia/Orchestrator-8B": {
+          "name": "Orchestrator 8B",
+          "limit": { "context": 40960, "output": 16384 }
+        },
+        "Soofi-Project/Soofi-Elbe": {
+          "name": "Soofi Elbe",
+          "limit": { "context": 262144, "output": 16384 }
+        }
+      }
+    }
+  }
+}
+

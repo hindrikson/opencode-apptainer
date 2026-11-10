@@ -20,8 +20,8 @@
       "npm": "@ai-sdk/openai-compatible",
       "name": "FhGenie",
       "options": {
-        "baseURL": "{env:FHGENIE_BASE_URL}",
-        "apiKey": "{env:FHGENIE_API_TOKEN}"
+        "baseURL": "{env:PROVIDER_URL}",
+        "apiKey": "{env:API_TOKEN}"
       },
       "models": {
         "deepseek-ai/DeepSeek-V4.1-Flash": {

@@ -34,6 +34,8 @@ To get a shell in the same restricted environment instead (for debugging, for ex
 ./run-agent.sh path/to/your_directory bash
 ```
 
+When OpenCode launches press **ctrl+p** to have a look at its keybindings.
+
 ## What the container can see
 
 Apptainer mounts your whole home directory by default. `run-agent.sh` turns that off and mounts only:

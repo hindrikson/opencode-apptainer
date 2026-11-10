@@ -27,7 +27,7 @@ Write one `KEY=value` per line, without quotes or spaces around `=`. Keep this f
 ./run-agent.sh path/to/your_directory
 ```
 
-Relative paths (including `.`) and absolute paths both work. Your directory appears as `/workspace` inside the container, and OpenCode starts there. When you quit OpenCode, the container exits. The script also ask to mount your conda environments.
+Relative paths (including `.`) and absolute paths both work. Your directory appears as `/workspace` inside the container, and OpenCode starts there. When you quit OpenCode, the container exits. The script also asks to mount your conda environments.
 
 To get a shell in the same restricted environment instead (for debugging, for example), add `bash`:
 ```

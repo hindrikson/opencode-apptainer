@@ -16,7 +16,7 @@ chmod +x run-agent.sh
 
 3. Create a file called `agent.env` next to `run-agent.sh`. Use `agent.env-template` as a template and edit the following variables:
 ```
-FHGENIE_BASE_URL=fhgenie_provider_url
+FHGENIE_BASE_URL=fhgenie-provider-url
 FHGENIE_API_TOKEN=place-your-token-here
 ```
 Write one `KEY=value` per line, without quotes or spaces around `=`. Keep this file private: don't commit it to git and don't put it inside a directory you mount in the container. `run-agent.sh` sets its permissions to owner-only automatically.

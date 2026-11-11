@@ -19,7 +19,7 @@ chmod +x run-agent.sh
 PROVIDER_URL=provider-url
 API_TOKEN=place-your-token-here
 ```
-Write one `KEY=value` per line, without quotes or spaces around `=`. Keep this file private: don't commit it to git and don't put it inside a directory you mount in the container. `run-agent.sh` sets its permissions to owner-only automatically.
+Write one `KEY=value` per line, without quotes or spaces around `=`. Keep this file private: don't commit it to git and don't put it inside a directory you mount in the container.
 
 4. Create a file called `mounts.conf` next to `run-agent.sh`. Use `mounts.conf-template` as a starting point:
 ```
@@ -37,7 +37,7 @@ The directory you pass is mounted at its **original host path** inside the conta
 
 The directory is optional: if `mounts.conf` lists at least one usable entry, you can run `./run-agent.sh` and the container starts in the agent home (`/mnt/home/<user>`). If `mounts.conf` is empty or has no usable entries, a project directory is required. The first argument is treated as the project only if it is an existing directory; otherwise it is treated as the start of the command.
 
-When you quit OpenCode, the container exits. Your conda installation is mounted automatically when one is found; the script asks whether to mount it read-only or read-write (read-only if there is no terminal).
+When you quit OpenCode, the container exits. Your conda installation is mounted automatically when one is found; the script asks whether to mount it read-only or read-write.
 
 To get a shell in the same restricted environment instead (for debugging, for example), add `bash`:
 ```
@@ -51,7 +51,7 @@ When OpenCode launches press **ctrl+p** to have a look at its keybindings.
 - `--conda-ro` — mount conda read-only, no prompt (same as `--conda`)
 - `--conda-rw` — mount conda read-write, no prompt
 - `--no-conda` — don't mount conda at all
-- (none) — ask read-only vs read-write; defaults to read-only if there is no terminal
+- (none) — ask read-only vs read-write; defaults to read-only.
 
 If no conda installation is found, a warning is printed and conda is skipped. Set `CONDA_BASE=/path/to/conda` to skip auto-detection (an invalid path is an error).
 
@@ -78,10 +78,8 @@ host_path[:container_path][:ro|:rw]
 - the mode defaults to read-only; use `:rw` to allow writes
 - blank lines and lines starting with `#` are ignored
 - a leading `~` expands to your home directory on the host side, and to the container home (`/mnt/home/<user>`) on the container side
-- `@HERE` expands to the directory containing `run-agent.sh`
-- entries whose host path is missing, or whose paths are not absolute, are skipped with a warning
 
-Set `MOUNTS_FILE=/path/to/file` to use a different list. Because entries are read-only by default, only add `:rw` for directories the agent actually needs to modify.
+Because entries are read-only by default, only add `:rw` for directories the agent actually needs to modify.
 
 The `opencode/` configuration directory is exposed through `mounts.conf` as well:
 ```

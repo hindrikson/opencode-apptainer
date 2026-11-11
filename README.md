@@ -74,6 +74,7 @@ Your real home, SSH keys and other projects are not visible unless you list them
 host_path[:container_path][:ro|:rw]
 ```
 
+- Check the template `mounts.conf-template`
 - `container_path` defaults to `host_path` (same path inside as outside)
 - the mode defaults to read-only; use `:rw` to allow writes
 - blank lines and lines starting with `#` are ignored

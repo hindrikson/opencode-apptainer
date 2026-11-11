@@ -3,6 +3,7 @@ description: Drafts release notes from git history using the release-notes skill
 mode: subagent
 permission:
   edit: deny
+  bash: deny
   skill:
     release-notes: allow
 ---

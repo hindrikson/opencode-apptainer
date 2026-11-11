@@ -1,3 +1,5 @@
+mounts.conf
 agent.env
 *.sif
 .nfs*
+*.swp

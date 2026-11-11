@@ -1,0 +1,19 @@
+# Format: host_path[:container_path][:ro|:rw]
+#
+#   - container_path defaults to host_path (same path inside as outside)
+#   - mode defaults to read-only
+#   - ~ on the host side = your home dir; ~ on the container side = /mnt/home/<user>
+#   - @HERE = the directory containing run-agent.sh
+#   - blank lines and lines starting with # are ignored
+
+# OpenCode config, mounted read-only at the agent's config location
+@HERE/opencode:~/.config/opencode:ro
+
+# Repositories
+/mnt/home/your_username/repos/some_repo:rw
+~/papers:ro
+~/scratch/outputs:rw
+
+# Data directories
+/mnt/data/models:ro
+/mnt/data/...

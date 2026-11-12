@@ -9,8 +9,8 @@ From: ubuntu:24.04
         zsh ripgrep jq unzip tar xz-utils \
         nodejs npm
 
-    # OpenCode (pinned)
-    npm install -g opencode-ai@1.19.5
+    # OpenCode 2.2.7 (pinned with allow-scripts for binary linking)
+    npm install -g --allow-scripts=@opencode/cli @opencode/cli@2.2.7
     npm cache clean --force
 
     # Neovim (pinned, official release)
@@ -35,5 +35,10 @@ From: ubuntu:24.04
     unset LD_PRELOAD
 
 %test
+    # Clear host environment leaks, redirect home/logs to a writable path
+    unset LD_PRELOAD
+    export HOME=/tmp
+    export OPENCODE_LOG_DIR="/tmp/opencode-logs"
+
     nvim --version | head -n 1
     opencode --version

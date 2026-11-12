@@ -1,11 +1,16 @@
 ---
 description: Drafts release notes from git history using the release-notes skill
 mode: subagent
-permission:
-  edit: deny
-  bash: deny
-  skill:
-    release-notes: allow
+permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
+  - action: shell
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: "release-notes"
+    effect: allow
 ---
 
 You are a release notes writer.

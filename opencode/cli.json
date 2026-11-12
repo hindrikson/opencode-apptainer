@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/cli.json",
+  "leader_timeout": 1500,
+  "keybinds": {
+    "leader": "ctrl+a",
+    "app.exit": "ctrl+c",
+
+    "prompt.editor": "<leader>e",
+    "session.new": "<leader>n",
+    "session.list": "<leader>l",
+    "model.list": "<leader>m",
+    "opencode.status": "<leader>s",
+    "theme.switch": "<leader>t",
+
+    "session.sidebar.toggle": "<leader>b",
+    "session.compact": "<leader>c",
+    "session.timeline": "<leader>g"
+  }
+}

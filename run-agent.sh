@@ -41,6 +41,10 @@
 #     /mnt/home/<user> on the container side
 #   - @HERE expands to the directory containing this script
 # Set MOUNTS_FILE=/path/to/file to use a different list.
+#
+# Credentials:
+#   agent.env (next to this script) is required. It contains KEY=value lines,
+#   including PROVIDER_URL and API_TOKEN, which must be filled in.
 set -euo pipefail
 
 usage() {
@@ -74,12 +78,65 @@ if [ $# -ge 1 ] && [ -d "$1" ]; then
   shift
 fi
 
-# Optional: API keys / proxy settings as KEY=value lines in agent.env
-ENV_ARGS=()
-if [ -f "$HERE/agent.env" ]; then
-  chmod 600 "$HERE/agent.env"
-  ENV_ARGS=(--env-file "$HERE/agent.env")
+# Required: API keys / proxy settings as KEY=value lines in agent.env
+ENV_FILE="$HERE/agent.env"
+if [ ! -f "$ENV_FILE" ]; then
+  echo "error: $ENV_FILE not found." >&2
+  echo "Create it from agent.env-template and fill in PROVIDER_URL and API_TOKEN:" >&2
+  echo "  cp \"$HERE/agent.env-template\" \"$ENV_FILE\"" >&2
+  echo "  chmod 600 \"$ENV_FILE\"" >&2
+  exit 1
 fi
+chmod 600 "$ENV_FILE"
+
+# Read KEY=value lines (blank lines and comments are ignored).
+declare -A ENV_VALUES=()
+while IFS= read -r line || [ -n "$line" ]; do
+  line="${line#"${line%%[![:space:]]*}"}"
+  line="${line%"${line##*[![:space:]]}"}"
+  case "$line" in ''|'#'*) continue ;; esac
+  case "$line" in export\ *) line="${line#export }" ;; esac
+  key="${line%%=*}"
+  [ "$key" != "$line" ] || continue
+  value="${line#*=}"
+  key="${key#"${key%%[![:space:]]*}"}"
+  key="${key%"${key##*[![:space:]]}"}"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  ENV_VALUES["$key"]="$value"
+done < "$ENV_FILE"
+
+# Required variables and the placeholder values they must no longer have.
+REQUIRED_ENV_VARS=(PROVIDER_URL API_TOKEN)
+PLACEHOLDER_VALUES=(
+  "PROVIDER_URL=fhgenie_provider_url"
+  "PROVIDER_URL=provider-url"
+  "API_TOKEN=your_token"
+  "API_TOKEN=place-your-token-here"
+)
+ENV_ERRORS=()
+for var in "${REQUIRED_ENV_VARS[@]}"; do
+  value="${ENV_VALUES[$var]-}"
+  if [ -z "$value" ]; then
+    ENV_ERRORS+=("  $var is missing or empty")
+    continue
+  fi
+  for entry in "${PLACEHOLDER_VALUES[@]}"; do
+    if [ "$entry" = "$var=$value" ]; then
+      ENV_ERRORS+=("  $var is still set to the placeholder '$value'")
+      break
+    fi
+  done
+done
+
+if [ ${#ENV_ERRORS[@]} -gt 0 ]; then
+  echo "error: $ENV_FILE has unset or placeholder values:" >&2
+  printf '%s\n' "${ENV_ERRORS[@]}" >&2
+  echo "Edit $ENV_FILE (see $HERE/agent.env-template) and try again." >&2
+  exit 1
+fi
+
+ENV_ARGS=(--env-file "$ENV_FILE")
 
 # Extra mounts from mounts.conf: host_path[:container_path][:ro|:rw]
 # Override the file location with MOUNTS_FILE=/path/to/file.

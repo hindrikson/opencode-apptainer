@@ -7,7 +7,7 @@
 #   - blank lines and lines starting with # are ignored
 
 # OpenCode config, mounted read-only at the agent's config location
-@HERE/opencode:~/.config/opencode:rw
+@HERE/opencode:~/.config/opencode:ro
 
 # Repositories
 /mnt/home/your_username/repos/some_repo:rw

@@ -1,5 +1,7 @@
 mounts.conf
 agent.env
+opencode/node_modules/
+opencode/service.json
 *.sif
 .nfs*
 *.swp

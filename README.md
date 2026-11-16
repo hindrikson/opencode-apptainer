@@ -46,6 +46,26 @@ To get a shell in the same restricted environment instead (for debugging, for ex
 
 When OpenCode launches press **ctrl+p** to have a look at its keybindings.
 
+## Extra mounts (`mounts.conf`)
+
+`mounts.conf` has one entry per line:
+
+```
+host_path[:container_path][:ro|:rw]
+```
+
+- Check the template `mounts.conf-template`
+- `container_path` defaults to `host_path` (same path inside as outside)
+- the mode defaults to read-only; use `:rw` to allow writes
+
+Because entries are read-only by default, only add `:rw` for directories the agent actually needs to modify.
+
+The `opencode/` configuration directory is exposed through `mounts.conf` as well:
+```
+@HERE/opencode:~/.config/opencode:rw
+```
+Keep that line so OpenCode finds its configuration, agents and skills.
+
 ### Conda options
 
 - `--conda-ro` — mount conda read-only, no prompt (same as `--conda`)
@@ -66,27 +86,6 @@ Apptainer mounts your whole home directory by default. `run-agent.sh` turns that
 
 Your real home, SSH keys and other projects are not visible unless you list them in `mounts.conf`. The network is open, since OpenCode needs it to reach the model API.
 
-## Extra mounts (`mounts.conf`)
-
-`mounts.conf` has one entry per line:
-
-```
-host_path[:container_path][:ro|:rw]
-```
-
-- Check the template `mounts.conf-template`
-- `container_path` defaults to `host_path` (same path inside as outside)
-- the mode defaults to read-only; use `:rw` to allow writes
-- blank lines and lines starting with `#` are ignored
-- a leading `~` expands to your home directory on the host side, and to the container home (`/mnt/home/<user>`) on the container side
-
-Because entries are read-only by default, only add `:rw` for directories the agent actually needs to modify.
-
-The `opencode/` configuration directory is exposed through `mounts.conf` as well:
-```
-@HERE/opencode:~/.config/opencode:rw
-```
-Keep that line so OpenCode finds its configuration, agents and skills. It is mounted read-write because OpenCode needs to write its own config files (for example `service.json`).
 
 ## Working safely
 
@@ -100,7 +99,7 @@ The `opencode/` directory next to `run-agent.sh` has two files:
 - `opencode.json`: OpenCode settings. You can set default models for the plan and build agents, define subagents, and more. See the OpenCode documentation.
 - `tui.json`: terminal interface settings, such as keybindings.
 
-Edit these files on the host or inside the container. `run-agent.sh` mounts `opencode/` read-write at `~/.config/opencode` inside the container (via the `@HERE/opencode:~/.config/opencode:rw` line in `mounts.conf`), so changes made inside the container are saved back to the host. Because this lets the agent modify its own configuration, review changes to these files.
+Edit these files on the host or inside the container. `run-agent.sh` mounts `opencode/` read-write at `~/.config/opencode` inside the container, so changes made inside the container are saved back to the host.
 
 ## Agents and skills
 
@@ -118,4 +117,4 @@ The `release-notes` agent and its `release-notes` skill are **only an example** 
 - `Unexpected server error` at startup is a generic message. Start a shell with `./run-agent.sh path/to/your_directory bash` and run `opencode --print-logs` to see the real cause.
 - To check that your credentials reached the container, start a shell as above and run `env | grep FHGENIE`.
 - If a directory is missing inside the container, check the `mounts:` warnings printed by `run-agent.sh` (missing or relative paths are skipped) and inspect the mounts from a `bash` shell with `mount | grep <path>`.
-- If OpenCode can't find its configuration, agents or skills, make sure `mounts.conf` still contains the `@HERE/opencode:~/.config/opencode:rw` line.
+- If OpenCode can't find its configuration, agents or skills, make sure `mounts.conf` still contains the `@HERE/opencode:~/.config/opencode:ro` line.

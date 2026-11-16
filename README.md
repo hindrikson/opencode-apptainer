@@ -25,7 +25,7 @@ Write one `KEY=value` per line, without quotes or spaces around `=`. Keep this f
 ```
 cp mounts.conf-template mounts.conf
 ```
-List the host directories you want the agent to reach, one per line (see [Extra mounts](#extra-mounts-mountsconf) below). `mounts.conf` is gitignored; keep it out of git since it describes your local layout.
+List the host directories you want the agent to reach, one per line (see [Extra mounts](#extra-mounts-mountsconf) below). `mounts.conf` is gitignored.
 
 ## Usage
 
@@ -84,9 +84,9 @@ Because entries are read-only by default, only add `:rw` for directories the age
 
 The `opencode/` configuration directory is exposed through `mounts.conf` as well:
 ```
-@HERE/opencode:~/.config/opencode:ro
+@HERE/opencode:~/.config/opencode:rw
 ```
-Keep that line so OpenCode finds its configuration, agents and skills.
+Keep that line so OpenCode finds its configuration, agents and skills. It is mounted read-write because OpenCode needs to write its own config files (for example `service.json`).
 
 ## Working safely
 
@@ -100,7 +100,7 @@ The `opencode/` directory next to `run-agent.sh` has two files:
 - `opencode.json`: OpenCode settings. You can set default models for the plan and build agents, define subagents, and more. See the OpenCode documentation.
 - `tui.json`: terminal interface settings, such as keybindings.
 
-Edit these files in `opencode/`, not inside the container. `run-agent.sh` mounts `opencode/` read-only at `~/.config/opencode` inside the container (via the `@HERE/opencode:~/.config/opencode:ro` line in `mounts.conf`), so changes made inside the container are not saved back to the host.
+Edit these files on the host or inside the container. `run-agent.sh` mounts `opencode/` read-write at `~/.config/opencode` inside the container (via the `@HERE/opencode:~/.config/opencode:rw` line in `mounts.conf`), so changes made inside the container are saved back to the host. Because this lets the agent modify its own configuration, review changes to these files.
 
 ## Agents and skills
 
@@ -109,7 +109,7 @@ Alongside those files, `opencode/` has two example directories:
 - `agents/`: agent definitions. Each Markdown file describes a named assistant with its own prompt, model and permissions.
 - `skills/`: reusable instructions an agent can load when needed. Each skill lives in its own directory with a `SKILL.md` file and can include supporting files.
 
-`run-agent.sh` exposes these directories inside the agent's global config (`~/.config/opencode` inside the container) through the same read-only `opencode/` mount, so OpenCode discovers them automatically. Changes made inside the container are not saved back to the host; edit them in `opencode/` instead.
+`run-agent.sh` exposes these directories inside the agent's global config (`~/.config/opencode` inside the container) through the same read-write `opencode/` mount, so OpenCode discovers them automatically. Changes made inside the container are saved back to the host, just like the rest of `opencode/`.
 
 The `release-notes` agent and its `release-notes` skill are **only an example** of how to create agents and skills. They are **not tested**. Treat them as a starting point for your own agents and skills. See the OpenCode documentation on creating [agents](https://opencode.ai/docs/agents/) and [skills](https://opencode.ai/docs/skills/).
 
@@ -118,4 +118,4 @@ The `release-notes` agent and its `release-notes` skill are **only an example** 
 - `Unexpected server error` at startup is a generic message. Start a shell with `./run-agent.sh path/to/your_directory bash` and run `opencode --print-logs` to see the real cause.
 - To check that your credentials reached the container, start a shell as above and run `env | grep FHGENIE`.
 - If a directory is missing inside the container, check the `mounts:` warnings printed by `run-agent.sh` (missing or relative paths are skipped) and inspect the mounts from a `bash` shell with `mount | grep <path>`.
-- If OpenCode can't find its configuration, agents or skills, make sure `mounts.conf` still contains the `@HERE/opencode:~/.config/opencode:ro` line.
+- If OpenCode can't find its configuration, agents or skills, make sure `mounts.conf` still contains the `@HERE/opencode:~/.config/opencode:rw` line.

@@ -14,10 +14,11 @@ apptainer build --fakeroot ubuntu-opencode.sif ubuntu.def
 chmod +x run-agent.sh
 ```
 
-3. Create a file called `agent.env` next to `run-agent.sh`. Use `agent.env-template` as a template and edit the following variables:
+3. Create a file called `agent.env` next to `run-agent.sh`. Use `agent.env-template` as a template:
 ```
 cp agent.env-template agent.env
 ```
+**And edit the following variables**:
 ```
 PROVIDER_URL=provider_url
 API_TOKEN=your_token

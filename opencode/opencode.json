@@ -12,9 +12,11 @@
   "providers": {
     "fhgenie": {
       "name": "FhGenie",
-      "env": ["API_TOKEN"],
       "package": "@opencode/ai/providers/openai-compatible",
-      "settings": { "baseURL": "{env:PROVIDER_URL}" },
+      "settings": {
+          "baseURL": "{env:PROVIDER_URL}",
+          "apiKey": "{env:API_TOKEN}"
+      },
       "models": {
         "deepseek-ai/DeepSeek-V4.1-Flash": {
           "name": "DeepSeek V4.1 Flash",

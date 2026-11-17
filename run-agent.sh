@@ -1,244 +1,167 @@
 #!/usr/bin/env bash
 # Usage: ./run-agent.sh [--conda-ro | --conda-rw | --no-conda] [/path/to/project] [command...]
-# Starts OpenCode in the container with the paths listed in mounts.conf, a
-# dedicated agent home, your conda installation, and (optionally) a project
-# directory mounted at its original host path.
-# Pass a command (e.g. `bash`) to run that instead of OpenCode.
 #
-# Container user and home:
-#   - The user name inside the container is your host user name.
-#   - The container home is /mnt/home/<user> (backed by ~/agent-home on the host).
-#
-# Project path:
-#   - The project is mounted at the same path inside the container as on the
-#     host, and the container starts in that directory.
-#   - If mounts.conf has at least one usable entry, the project path is
-#     optional. Without one, the container starts in /mnt/home/<user>.
-#   - If mounts.conf is empty (or has no usable entries), a project path is
-#     required.
-#   - The first argument is treated as the project only if it is an existing
-#     directory; otherwise it is treated as the start of the command.
-#
-# Conda (mounted automatically when found):
-#   --conda-ro   mount your conda installation + envs read-only, no prompt
-#   --conda-rw   mount your conda installation + envs read-write, no prompt
-#   --no-conda   don't mount conda at all
-#   (none)       ask whether to mount read-only or read-write; defaults to
-#                read-only if there is no terminal
-#   --conda      alias for --conda-ro
-# If no conda installation is found, a warning is printed and conda is skipped.
-# Set CONDA_BASE=/path/to/conda to skip auto-detection (an invalid path is an
-# error).
-#
-# Extra mounts: list them in mounts.conf (next to this script), one per line:
-#
-#     host_path[:container_path][:ro|:rw]
-#
-#   - container_path defaults to host_path (same path inside as outside)
-#   - mode defaults to read-only
-#   - blank lines and lines starting with # are ignored
-#   - a leading ~ expands to your home dir on the host side, and to
-#     /mnt/home/<user> on the container side
-#   - @HERE expands to the directory containing this script
-# Set MOUNTS_FILE=/path/to/file to use a different list.
+# Runs OpenCode (or the given command) in ubuntu-opencode.sif next to this script.
+#   - The container home is your host home path, backed by ~/agent-home.
+#   - The project (first argument, only if it is an existing directory) is mounted
+#     at the same path as on the host and becomes the working directory. It is
+#     optional when mounts.conf has at least one usable entry.
+#   - agent.env (next to this script) must set PROVIDER_URL and API_TOKEN.
+#   - Conda is mounted at its host path when found: --conda-ro (alias --conda),
+#     --conda-rw, or --no-conda. With no flag you are asked (default: read-only,
+#     also used when there is no terminal). Set CONDA_BASE=/path to skip detection.
+#   - Extra mounts go in mounts.conf, one per line:
+#         host_path[:container_path][:ro|:rw]
+#     container_path defaults to host_path, mode defaults to ro, '#' starts a
+#     comment, a leading ~ means your home, @HERE means this script's directory.
+#     Set MOUNTS_FILE=/path/to/file to use a different list.
 set -euo pipefail
 
-usage() {
-  echo "usage: run-agent.sh [--conda-ro | --conda-rw | --no-conda] [/path/to/project] [command...]" >&2
+usage() { sed -n '2,/^set /{/^set /!s/^# \{0,1\}//p}' "$0"; }
+die() {
+  echo "error: $*" >&2
+  exit 1
 }
 
-CONDA_ENABLE=yes
-CONDA_PERM=ask   # ask | ro | rw
+CONDA_PERM=ask # ask | ro | rw | no
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --conda|--conda-ro) CONDA_ENABLE=yes; CONDA_PERM=ro; shift ;;
-    --conda-rw)         CONDA_ENABLE=yes; CONDA_PERM=rw; shift ;;
-    --no-conda)         CONDA_ENABLE=no;  shift ;;
-    -h|--help)          usage; exit 0 ;;
-    --)                 shift; break ;;
-    -*)                 echo "unknown option: $1" >&2; usage; exit 1 ;;
-    *)                  break ;;
+  case $1 in
+  --conda | --conda-ro) CONDA_PERM=ro ;;
+  --conda-rw) CONDA_PERM=rw ;;
+  --no-conda) CONDA_PERM=no ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --)
+    shift
+    break
+    ;;
+  -*)
+    usage >&2
+    die "unknown option: $1"
+    ;;
+  *) break ;;
   esac
+  shift
 done
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOST_USER="$(id -un)"
-CONT_HOME="/mnt/home/$HOST_USER"
 AGENT_HOME="$HOME/agent-home"
 mkdir -p "$AGENT_HOME"
 
-# Optional project: the first argument, if it is an existing directory.
+# Optional project: first argument, if it is an existing directory.
 PROJECT=""
 if [ $# -ge 1 ] && [ -d "$1" ]; then
   PROJECT="$(cd "$1" && pwd)"
   shift
 fi
 
-# Optional: API keys / proxy settings as KEY=value lines in agent.env
-ENV_ARGS=()
-if [ -f "$HERE/agent.env" ]; then
-  chmod 600 "$HERE/agent.env"
-  ENV_ARGS=(--env-file "$HERE/agent.env")
-fi
+# Required settings. Values are parsed, never sourced, so nothing gets executed.
+ENV_FILE="$HERE/agent.env"
+[ -f "$ENV_FILE" ] || die "$ENV_FILE not found. Create it with your PROVIDER_URL and API_TOKEN."
+chmod 600 "$ENV_FILE"
+for pair in PROVIDER_URL:provider_url API_TOKEN:your_token; do
+  var=${pair%%:*} placeholder=${pair#*:}
+  value=$(sed -n "s/^[[:space:]]*$var[[:space:]]*=//p" "$ENV_FILE" | tail -n 1 | tr -d "\"'[:space:]")
+  case $value in '' | "$placeholder") die "$var in $ENV_FILE is missing, empty, or still '$placeholder'." ;; esac
+done
 
-# Extra mounts from mounts.conf: host_path[:container_path][:ro|:rw]
-# Override the file location with MOUNTS_FILE=/path/to/file.
-MOUNT_BIND_ARGS=()
-MOUNT_COUNT=0
+BINDS=()
+[ -z "$PROJECT" ] || BINDS+=(--bind "$PROJECT:$PROJECT")
+
+# Extra mounts: host_path[:container_path][:ro|:rw]
 MOUNTS_FILE="${MOUNTS_FILE:-$HERE/mounts.conf}"
 if [ -f "$MOUNTS_FILE" ]; then
-  while IFS= read -r line || [ -n "$line" ]; do
-    # trim leading/trailing whitespace
-    line="${line#"${line%%[![:space:]]*}"}"
-    line="${line%"${line##*[![:space:]]}"}"
-    # skip blanks and comments
-    case "$line" in ''|'#'*) continue ;; esac
+  while read -r line || [ -n "$line" ]; do # plain `read` trims surrounding whitespace
+    case $line in '' | '#'*) continue ;; esac
+    line=${line//@HERE/$HERE}
 
-    # @HERE -> directory of this script
-    line="${line//@HERE/$HERE}"
-
-    # optional :ro / :rw suffix (default: read-only)
     mode=ro
-    case "$line" in
-      *:ro) line="${line%:ro}" ;;
-      *:rw) line="${line%:rw}"; mode=rw ;;
-    esac
+    if [[ $line =~ ^(.*):(ro|rw)$ ]]; then line=${BASH_REMATCH[1]} mode=${BASH_REMATCH[2]}; fi
 
-    # split into host path and optional container path
-    host="${line%%:*}"
-    if [ "$host" = "$line" ]; then cont=""; else cont="${line#*:}"; fi
+    host=${line%%:*}
+    cont=${line#"$host"}
+    cont=${cont#:}
+    cont=${cont:-$host}
+    host=${host/#\~/$HOME}
+    cont=${cont/#\~/$HOME}
 
-    # expand a leading ~ on the host side (-> $HOME)
-    case "$host" in
-      "~")   host="$HOME" ;;
-      "~/"*) host="$HOME/${host#\~/}" ;;
-    esac
-
-    # container path defaults to the host path; a leading ~ means the container home
-    [ -n "$cont" ] || cont="$host"
-    case "$cont" in
-      "~")   cont="$CONT_HOME" ;;
-      "~/"*) cont="$CONT_HOME/${cont#\~/}" ;;
-    esac
-
-    case "$host" in
-      /*) ;;
-      *)  echo "mounts: skipping '$host' (host path must be absolute)" >&2; continue ;;
-    esac
-    case "$cont" in
-      /*) ;;
-      *)  echo "mounts: skipping '$cont' (container path must be absolute)" >&2; continue ;;
-    esac
-    if [ ! -e "$host" ]; then
+    [[ $host == /* && $cont == /* ]] || {
+      echo "mounts: skipping '$line' (paths must be absolute)" >&2
+      continue
+    }
+    [ -e "$host" ] || {
       echo "mounts: skipping '$host' (does not exist)" >&2
       continue
+    }
+
+    # Targets under the home live inside the agent home (itself a bind mount),
+    # so the mount point has to exist there.
+    if [[ $cont == "$HOME"/* ]]; then
+      mp="$AGENT_HOME/${cont#"$HOME"/}"
+      if [ -d "$host" ]; then mkdir -p "$mp"; else
+        mkdir -p "${mp%/*}"
+        [ -e "$mp" ] || touch "$mp"
+      fi
     fi
 
-    # Targets under the container home live inside the agent home (itself a
-    # bind mount), so make sure the mount point exists there.
-    case "$cont" in
-      "$CONT_HOME"/*)
-        mp="$AGENT_HOME/${cont#"$CONT_HOME"/}"
-        if [ -d "$host" ]; then
-          mkdir -p "$mp"
-        else
-          mkdir -p "$(dirname "$mp")"
-          [ -e "$mp" ] || touch "$mp"
-        fi
-        ;;
-    esac
-
-    MOUNT_BIND_ARGS+=(--bind "$host:$cont:$mode")
-    MOUNT_COUNT=$((MOUNT_COUNT + 1))
+    BINDS+=(--bind "$host:$cont:$mode")
     echo "Mounting $host -> $cont ($mode)" >&2
-  done < "$MOUNTS_FILE"
+  done <"$MOUNTS_FILE"
 fi
 
-# A project path is only required when mounts.conf provided nothing to work on.
-if [ -z "$PROJECT" ] && [ "$MOUNT_COUNT" -eq 0 ]; then
-  if [ $# -ge 1 ]; then
-    echo "error: '$1' is not a directory. A project path is required because $MOUNTS_FILE has no usable mounts." >&2
-  else
-    echo "error: a project path is required because $MOUNTS_FILE has no usable mounts." >&2
-  fi
-  usage
-  exit 1
+# A project is only required when there is nothing else to work on.
+if [ -z "$PROJECT" ] && [ ${#BINDS[@]} -eq 0 ]; then
+  usage >&2
+  die "a project path is required because $MOUNTS_FILE has no usable mounts."
 fi
 
-# Conda environments (mounted automatically; only the access mode is asked)
-CONDA_BIND_ARGS=()
-if [ "$CONDA_ENABLE" = yes ]; then
-  CONDA_BASE="${CONDA_BASE:-}"
-  CONDA_EXPLICIT=no
-  if [ -n "$CONDA_BASE" ]; then CONDA_EXPLICIT=yes; fi
-
-  # 1) ask conda itself, 2) fall back to common install locations
-  if [ -z "$CONDA_BASE" ] && command -v conda >/dev/null 2>&1; then
-    CONDA_BASE="$(conda info --base 2>/dev/null || true)"
-  fi
-  if [ -z "$CONDA_BASE" ]; then
-    for d in "$HOME/miniconda3" "$HOME/anaconda3" "$HOME/miniforge3" \
-             "$HOME/mambaforge" /opt/conda /opt/miniconda3 /opt/anaconda3; do
-      if [ -x "$d/bin/conda" ]; then CONDA_BASE="$d"; break; fi
+# Conda: mounted at the same path as on the host (envs hard-code absolute paths).
+if [ "$CONDA_PERM" != no ]; then
+  base=${CONDA_BASE:-}
+  [ -n "$base" ] || base=$(conda info --base 2>/dev/null || true)
+  if [ -z "$base" ]; then
+    for d in "$HOME/miniconda3" "$HOME/anaconda3" "$HOME/miniforge3" "$HOME/mambaforge" \
+      /opt/conda /opt/miniconda3 /opt/anaconda3; do
+      if [ -x "$d/bin/conda" ]; then
+        base=$d
+        break
+      fi
     done
   fi
 
-  if [ -z "$CONDA_BASE" ] || [ ! -d "$CONDA_BASE" ]; then
-    if [ "$CONDA_EXPLICIT" = yes ]; then
-      echo "CONDA_BASE='$CONDA_BASE' is not a directory." >&2
-      exit 1
-    fi
-    echo "No conda installation found; skipping conda mount. (Set CONDA_BASE=/path/to/conda to specify one.)" >&2
-  else
-    # Ask for the access mode unless a flag already decided it.
+  if [ -d "$base" ]; then
     if [ "$CONDA_PERM" = ask ]; then
       CONDA_PERM=ro
       if [ -t 0 ] && [ -t 1 ]; then
         read -r -p "Mount conda environments read-only or read-write? [RO/rw] " reply
-        reply="$(printf '%s' "$reply" | tr '[:upper:]' '[:lower:]')"
-        case "$reply" in
-          rw|w|write|read-write|readwrite) CONDA_PERM=rw ;;
-          *)                               CONDA_PERM=ro ;;
-        esac
+        case ${reply,,} in rw | w | write | read-write | readwrite) CONDA_PERM=rw ;; esac
       fi
     fi
+    BINDS+=(--bind "$base:$base:$CONDA_PERM")
 
-    # Conda envs contain hard-coded absolute paths (shebangs, rpaths), so mount
-    # everything at the SAME path as on the host.
-    CONDA_BIND_ARGS+=(--bind "$CONDA_BASE:$CONDA_BASE:$CONDA_PERM")
+    # Also mount envs dirs that live outside the conda base (e.g. ~/.conda/envs).
+    while read -r d; do
+      [ -d "$d" ] && [[ $d/ != "$base"/* ]] && BINDS+=(--bind "$d:$d:$CONDA_PERM")
+    done < <("$base/bin/conda" config --show envs_dirs 2>/dev/null | sed -n 's/^  - //p')
 
-    # Also mount any envs dirs that live outside the conda base (e.g. ~/.conda/envs)
-    while IFS= read -r d; do
-      [ -d "$d" ] || continue
-      case "$d/" in "$CONDA_BASE"/*) continue ;; esac
-      CONDA_BIND_ARGS+=(--bind "$d:$d:$CONDA_PERM")
-    done < <("$CONDA_BASE/bin/conda" config --show envs_dirs 2>/dev/null | sed -n 's/^  - //p')
-
-    # Make the `conda` command available inside the container
-    # (APPTAINERENV_* variables survive --cleanenv)
-    export APPTAINERENV_PREPEND_PATH="$CONDA_BASE/condabin"
-    echo "Mounting conda from $CONDA_BASE ($CONDA_PERM)" >&2
+    export APPTAINERENV_PREPEND_PATH="$base/condabin" # survives --cleanenv
+    echo "Mounting conda from $base ($CONDA_PERM)" >&2
+  elif [ -n "${CONDA_BASE:-}" ]; then
+    die "CONDA_BASE='$CONDA_BASE' is not a directory."
+  else
+    echo "No conda installation found; skipping conda mount. (Set CONDA_BASE=/path/to/conda to specify one.)" >&2
   fi
-fi
-
-# The project is mounted at the same path as on the host and becomes the
-# working directory; without one, start in the container home.
-PROJECT_ARGS=()
-PWD_DIR="$CONT_HOME"
-if [ -n "$PROJECT" ]; then
-  PROJECT_ARGS=(--bind "$PROJECT:$PROJECT")
-  PWD_DIR="$PROJECT"
 fi
 
 exec apptainer exec \
   --containall --cleanenv --no-mount cwd --writable-tmpfs \
-  ${ENV_ARGS[@]+"${ENV_ARGS[@]}"} \
-  --home "$AGENT_HOME:$CONT_HOME" \
-  ${PROJECT_ARGS[@]+"${PROJECT_ARGS[@]}"} \
-  ${CONDA_BIND_ARGS[@]+"${CONDA_BIND_ARGS[@]}"} \
-  ${MOUNT_BIND_ARGS[@]+"${MOUNT_BIND_ARGS[@]}"} \
-  --pwd "$PWD_DIR" \
+  --env-file "$ENV_FILE" \
+  --home "$AGENT_HOME:$HOME" \
+  "${BINDS[@]}" \
+  --pwd "${PROJECT:-$HOME}" \
   --env TERM="${TERM:-xterm-256color}" \
-  --env USER="$HOST_USER" \
-  --env LOGNAME="$HOST_USER" \
+  --env USER="$(id -un)" \
+  --env LOGNAME="$(id -un)" \
   "$HERE/ubuntu-opencode.sif" "${@:-opencode}"

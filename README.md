@@ -25,12 +25,16 @@ Write one `KEY=value` per line, without quotes or spaces around `=`. The templat
 ```
 cp mounts.conf-template mounts.conf
 ```
-List the host directories you want the agent to reach, one per line (see [Extra mounts](#extra-mounts-mountsconf) below). `mounts.conf` is gitignored; keep it out of git since it describes your local layout.
+List the host directories you want the agent to reach, one per line (see [Extra mounts](#extra-mounts-mountsconf) below). `mounts.conf` is gitignored.
 
 ## Usage
 
 ```
 ./run-agent.sh [--conda-ro | --conda-rw | --no-conda] [path/to/your_directory] [command...]
+```
+Example
+```
+./run-agent.sh --conda-ro path/to/your_directory
 ```
 
 The directory you pass is mounted at its **original host path** inside the container, and OpenCode starts there. Relative paths (including `.`) and absolute paths both work.
@@ -44,7 +48,7 @@ To get a shell in the same restricted environment instead (for debugging, for ex
 ./run-agent.sh path/to/your_directory bash
 ```
 
-Keybindings are defined in `opencode/cli.json` (the leader key is `ctrl+a`, e.g. `<leader>s` opens the status view).
+Keybindings are defined in `opencode/cli.json`. Once OpenCode starts press Ctrl+p to see the keybindings.
 
 ### Conda options
 
@@ -100,7 +104,7 @@ Keep these lines so OpenCode finds its configuration, agents and skills. Order m
 
 ## Working safely
 
-- The agent can edit or delete anything in the mounted directories. Use git, work on a branch, and review the diff on the host before committing. Commit and push from the host, since there are no SSH keys inside the container.
+- The agent can edit or delete anything in the mounted directories. Use git, work on a branch, and review the diff on the host before committing.  Commit and push from the host, since there are no SSH keys inside the container. You can also define agents to only edit specific files, and forbid all the rest.
 - Mounts default to read-only. Only add `:rw` to entries the agent needs to modify.
 
 ## Configuration

@@ -50,6 +50,27 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AGENT_HOME="$HOME/agent-home"
 mkdir -p "$AGENT_HOME"
 
+# --- OpenCode service port ---------------------------------------------------
+# Write opencode/service.json with a free TCP port (checked on this node).
+OC_DIR="$HERE/opencode"
+mkdir -p "$OC_DIR"
+
+port_in_use() { ss -ltn | grep -q ":$1 "; }
+
+PORT=""
+for i in $(seq 0 199); do
+  cand=$((20000 + ($(id -u) + i) % 40000)) # stable per-user starting point
+  port_in_use "$cand" || {
+    PORT=$cand
+    break
+  }
+done
+[ -n "$PORT" ] || die "no free port found in 200 tries"
+
+printf '{\n  "port": %s\n}\n' "$PORT" >"$OC_DIR/service.json"
+echo "opencode: using port $PORT" >&2
+#
+# -----------------------------------------------------------------------------
 # Optional project: first argument, if it is an existing directory.
 PROJECT=""
 if [ $# -ge 1 ] && [ -d "$1" ]; then

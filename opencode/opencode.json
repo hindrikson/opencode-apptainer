@@ -2,9 +2,15 @@
   "$schema": "https://opencode.ai/config.json",
   "default_agent": "plan",
   "small_model": "fhgenie/deepseek-ai/DeepSeek-V4.1-Flash",
-  "permissions": [
-    { "action": "skill", "resource": "*", "effect": "deny" }
-  ],
+  // "permissions": [
+  //   { "action": "*", "resource": "*", "effect": "deny" }, // Denies everything
+  //   { "action": "skill", "resource": "*", "effect": "deny" },
+  //   { "action": "shell", "resource": "*", "effect": "deny" },
+  //   { "action": "edit", "resource": "*", "effect": "deny" },
+  //   { "action": "read", "resource": "*", "effect": "deny" },
+  //   { "action": "glob",  "resource": "*", "effect": "deny" },
+  //   { "action": "grep",  "resource": "*", "effect": "deny" }
+  // ],
   "agents": {
     "plan":  { "model": "fhgenie/deepseek-ai/DeepSeek-V4.1-Flash" },
     "build": { "model": "fhgenie/deepseek-ai/DeepSeek-V4.1-Flash" }

@@ -1,6 +1,6 @@
 # OpenCode with Apptainer
 
-Run OpenCode from inside a container that can only see the directories you choose. Apptainer must be installed.
+Run OpenCode v2.2.7 from inside a container that can only see the directories you choose. Apptainer must be installed.
 
 ## Setup (once)
 

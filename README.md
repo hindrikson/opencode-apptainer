@@ -54,26 +54,6 @@ To get a shell in the same restricted environment instead (for debugging, for ex
 
 Keybindings are defined in `opencode/cli.json`. Once OpenCode starts press Ctrl+p to see the keybindings.
 
-## Extra mounts (`mounts.conf`)
-
-`mounts.conf` has one entry per line:
-
-```
-host_path[:container_path][:ro|:rw]
-```
-
-- Check the template `mounts.conf-template`
-- `container_path` defaults to `host_path` (same path inside as outside)
-- the mode defaults to read-only; use `:rw` to allow writes
-
-Because entries are read-only by default, only add `:rw` for directories the agent actually needs to modify.
-
-The `opencode/` configuration directory is exposed through `mounts.conf` as well:
-```
-@HERE/opencode:~/.config/opencode:rw
-```
-Keep that line so OpenCode finds its configuration, agents and skills.
-
 ### Conda options
 
 - `--conda-ro` — mount conda read-only, no prompt (same as `--conda`)
@@ -93,8 +73,6 @@ Apptainer mounts your whole home directory by default. `run-agent.sh` turns that
 - `~/agent-home` on the host as the agent's home, at `/mnt/home/<user>` inside the container (OpenCode's login state and caches live there)
 
 Your real home, SSH keys and other projects are not visible unless you list them in `mounts.conf`. The network is open, since OpenCode needs it to reach the model API.
-
-Before starting OpenCode, `run-agent.sh` picks a free TCP port on the current node and writes it to `opencode/service.json` on the host. OpenCode reads that file through the `opencode/` mount, which is why that directory is mounted writable (see below).
 
 ## Extra mounts (`mounts.conf`)
 
@@ -133,7 +111,7 @@ Keep these lines so OpenCode finds its configuration, agents and skills. Order m
 
 ## Configuration
 
-The `opencode/` directory next to `run-agent.sh` holds the configuration:
+The `opencode/` directory holds the configuration:
 
 - `opencode.json`: OpenCode settings. You can set default models for the plan and build agents, define providers and subagents, and more. See the OpenCode documentation.
 - `cli.json`: command-line interface settings, such as keybindings.

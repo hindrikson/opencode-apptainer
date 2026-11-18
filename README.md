@@ -54,6 +54,26 @@ To get a shell in the same restricted environment instead (for debugging, for ex
 
 Keybindings are defined in `opencode/cli.json`. Once OpenCode starts press Ctrl+p to see the keybindings.
 
+## Extra mounts (`mounts.conf`)
+
+`mounts.conf` has one entry per line:
+
+```
+host_path[:container_path][:ro|:rw]
+```
+
+- Check the template `mounts.conf-template`
+- `container_path` defaults to `host_path` (same path inside as outside)
+- the mode defaults to read-only; use `:rw` to allow writes
+
+Because entries are read-only by default, only add `:rw` for directories the agent actually needs to modify.
+
+The `opencode/` configuration directory is exposed through `mounts.conf` as well:
+```
+@HERE/opencode:~/.config/opencode:rw
+```
+Keep that line so OpenCode finds its configuration, agents and skills.
+
 ### Conda options
 
 - `--conda-ro` — mount conda read-only, no prompt (same as `--conda`)

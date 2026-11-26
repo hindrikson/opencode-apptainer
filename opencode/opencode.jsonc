@@ -3,7 +3,8 @@
   "default_agent": "plan",
   "small_model": "fhgenie/deepseek-ai/DeepSeek-V4.1-Flash",
   "permissions": [
-    { "action": "*", "resource": "*", "effect": "deny" }, // Denies everything
+    { "action": "*", "resource": "*.env", "effect": "deny" }, // Denies everything
+    { "action": "external_directory", "resource": "*.env", "effect": "deny" },
     { "action": "read", "resource": "*.env", "effect": "deny" },
     { "action": "shell", "resource": "*.env", "effect": "deny" },
     { "action": "edit", "resource": "*.env", "effect": "deny" },

@@ -6,16 +6,12 @@
 #   - @HERE = the directory containing run-agent.sh
 #   - blank lines and lines starting with # are ignored
 
-# OpenCode config directory. It must be writable because OpenCode stores
-# service state (service.json) here. The parent mount has to come first.
-@HERE/opencode:~/.config/opencode:rw
-
 # Hand-written config, protected read-only on top of the writable directory.
 # If something fails with EROFS, move that path out of this list.
 @HERE/opencode/agents:~/.config/opencode/agents:ro
 @HERE/opencode/skills:~/.config/opencode/skills:ro
-@HERE/opencode/opencode.json:~/.config/opencode/opencode.json:ro
-@HERE/opencode/cli.json:~/.config/opencode/cli.json:ro
+@HERE/opencode/opencode.json:~/.config/opencode/opencode.jsonc:ro
+@HERE/opencode/cli.json:~/.config/opencode/cli.jsonc:ro
 
 # Repositories
 /mnt/home/your_username/repos/some_repo:rw

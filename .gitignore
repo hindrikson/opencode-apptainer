@@ -7,3 +7,4 @@ opencode/service.json
 *.sif
 .nfs*
 *.swp
+*.tmp

@@ -10,8 +10,8 @@
 # If something fails with EROFS, move that path out of this list.
 @HERE/opencode/agents:~/.config/opencode/agents:ro
 @HERE/opencode/skills:~/.config/opencode/skills:ro
-@HERE/opencode/opencode.json:~/.config/opencode/opencode.jsonc:ro
-@HERE/opencode/cli.json:~/.config/opencode/cli.jsonc:ro
+@HERE/opencode/opencode.jsonc:~/.config/opencode/opencode.jsonc:ro
+@HERE/opencode/cli.jsonc:~/.config/opencode/cli.jsonc:ro
 
 # Repositories
 /mnt/home/your_username/repos/some_repo:rw
